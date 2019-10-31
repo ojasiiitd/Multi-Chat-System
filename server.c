@@ -28,12 +28,15 @@ void* receiveMsg(void* curSocket)
 	int len , i , j , left;
 	char buffer[1000] , bufferUpdate[1000];
 
-	while((len = recv(newClient.socketNum , buffer , 1000 , 0)) > 0)
+	len = recv(newClient.socketNum , buffer , 1000 , 0);
+	while(len > 0)
 	{
+		len = recv(newClient.socketNum , buffer , 1000 , 0);
 		buffer[len] = '\0';
 
 		if(len == 0)
 		{
+			printf("HEREEE\n");
 			int flag = 1;
 			for(i=0 ; i<n ; i++)
 			{
@@ -41,6 +44,7 @@ void* receiveMsg(void* curSocket)
 				{
 					flag = -1;
 					left = i;
+					printf("%d\n" , left);
 					break;
 				}
 			}
