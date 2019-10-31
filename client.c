@@ -27,6 +27,7 @@ int main(int argc , char* argv[])
 	struct sockaddr_in clientAddress;
 	int oldsocketfd , newsocketfd , clieSize , port , len , check;
 	char buffer[1000] , username[50] , curMsg[1000];
+
 	pthread_t receivedThread;
 
 	strcpy(username,argv[1]);
@@ -65,5 +66,8 @@ int main(int argc , char* argv[])
 		bzero(curMsg , sizeof(curMsg));
 	}
 	pthread_join(receivedThread , NULL);
+	
 	close(oldsocketfd);
+
+	return 0;
 }

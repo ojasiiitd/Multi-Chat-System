@@ -10,7 +10,7 @@
 struct clientInfo
 {
 	int socketfd;
-	char username[50];	
+	int status;
 };
 
 struct clientInfo allClients[100];
@@ -29,7 +29,7 @@ void* receiveMsg(void* curSocket)
 
 	len = recv(newClient.socketNum , buffer , 1000 , 0);
 	while(len > 0)
-	{
+	{	
 		len = recv(newClient.socketNum , buffer , 1000 , 0);
 		buffer[len] = '\0';
 
@@ -44,6 +44,12 @@ void* receiveMsg(void* curSocket)
 			printf("PRIVATE MESSAGE\n");
 			int to = buffer[colon++] - '0';
 
+			if(allClients[to-1].status == -1)
+			{
+				printf("The client has already left the chat.\n");
+				continue;
+			}
+
 			int filled = 0;
 			for(int i=0 ; buffer[i]!=':' ; i++)
 				bufferUpdate[filled++] = buffer[i];
@@ -53,6 +59,7 @@ void* receiveMsg(void* curSocket)
 				bufferUpdate[filled++] = buffer[i];
 			bufferUpdate[filled] = '\0';
 
+			// sending to only 'to' client
 			int check = send(allClients[to-1].socketfd , bufferUpdate , strlen(bufferUpdate),0);
 			if(check < 0)
 			{
@@ -64,6 +71,7 @@ void* receiveMsg(void* curSocket)
 		else
 		{
 			printf("BROADCAST MESSAGE\n");
+			
 			// sending to all clients
 			for(i=0 ; i<n ; i++)
 			{
@@ -82,40 +90,28 @@ void* receiveMsg(void* curSocket)
 		bzero(buffer , sizeof(buffer));
 		bzero(bufferUpdate , sizeof(bufferUpdate));
 	}
-	printf("An existing user, #%d, has left!\n" , n);
-	for(i = 0; i < n; i++)
-	{
-		if(allClients[i].socketfd == newClient.socketNum)
-		{
-			j = i;
-			while(j < n-1)
-			{
-				allClients[j].socketfd = allClients[j+1].socketfd;
-				j++;
-			}
-		}
-	}
-	n--;
+	printf("An existing user has left!\n");
 }
 
 int main(int argc , char* argv[])
 {
 	struct sockaddr_in serverAddress , clientAddress;
 	struct clients newClient;
-	socklen_t cliLen;
+	socklen_t cliLen , serLen;
 	int oldsockfd , newsockfd , port , len , check;
 	char buffer[1000];
 	
 	pthread_t receivedThread;
 
 	port = atoi(argv[1]);
-	oldsockfd = socket(AF_INET,SOCK_STREAM,0);
+	oldsockfd = socket(AF_INET , SOCK_STREAM , 0);
 	bzero((char *) &serverAddress , sizeof(serverAddress));
 	serverAddress.sin_family = AF_INET;
 	serverAddress.sin_port = htons(port);
 	
 	cliLen = sizeof(clientAddress);
-	check = bind(oldsockfd,(struct sockaddr *)&serverAddress,sizeof(serverAddress));
+
+	check = bind(oldsockfd , (struct sockaddr *)&serverAddress , sizeof(serverAddress));
 	if(check < 0)
 	{
 		perror("error while binding");
@@ -141,10 +137,15 @@ int main(int argc , char* argv[])
 		printf("A new user, #%d, has joined!\n" , n+1);
 
 		newClient.socketNum = newsockfd;
-		allClients[n++].socketfd = newsockfd;
+		allClients[n].socketfd = newsockfd;
+		allClients[n++].status = 1;
 
 		pthread_create(&receivedThread , NULL , receiveMsg , &newClient);
 		sleep(1);
 	}
+
+	close(oldsockfd);
+	close(newsockfd);
+
 	return 0;
 }
