@@ -11,6 +11,7 @@ struct clientInfo
 {
 	int socketfd;
 	int status;
+	char username[50];
 };
 
 struct clientInfo allClients[100];
@@ -24,14 +25,28 @@ struct clients
 void* receiveMsg(void* curSocket)
 {
 	struct clients newClient = *((struct clients *)curSocket);
-	int len , i , j;
+	int len , i , j , left;
 	char buffer[1000] , bufferUpdate[1000];
 
-	len = recv(newClient.socketNum , buffer , 1000 , 0);
-	while(len > 0)
-	{	
-		len = recv(newClient.socketNum , buffer , 1000 , 0);
+	while((len = recv(newClient.socketNum , buffer , 1000 , 0)) > 0)
+	{
 		buffer[len] = '\0';
+
+		if(len == 0)
+		{
+			int flag = 1;
+			for(i=0 ; i<n ; i++)
+			{
+				if(allClients[i].socketfd == newClient.socketNum)
+				{
+					flag = -1;
+					left = i;
+					break;
+				}
+			}
+			if(flag == -1)
+				break;
+		}
 
 		int colon;
 		for(colon=0 ; buffer[colon]!='\0' ; colon++)
@@ -43,6 +58,12 @@ void* receiveMsg(void* curSocket)
 		{
 			printf("PRIVATE MESSAGE\n");
 			int to = buffer[colon++] - '0';
+
+			if(to > n || to <= 0)
+			{
+				printf("Input Error : please enter a valid client number.\n");
+				continue;
+			}
 
 			if(allClients[to-1].status == -1)
 			{
@@ -90,7 +111,9 @@ void* receiveMsg(void* curSocket)
 		bzero(buffer , sizeof(buffer));
 		bzero(bufferUpdate , sizeof(bufferUpdate));
 	}
-	printf("An existing user has left!\n");
+
+	allClients[left].status = -1;
+	printf("User #%d has left!\n" , left+1);
 }
 
 int main(int argc , char* argv[])
@@ -134,14 +157,16 @@ int main(int argc , char* argv[])
 			exit(1);
 		}
 		
-		printf("A new user, #%d, has joined!\n" , n+1);
+		char uName[50];
+		recv(newsockfd , uName , 50 , 0);
+		printf("A new user has joined :- %s , #%d\n" , uName , n+1);
 
 		newClient.socketNum = newsockfd;
 		allClients[n].socketfd = newsockfd;
-		allClients[n++].status = 1;
+		allClients[n].status = 1;
+		strcpy(allClients[n++].username , uName);
 
 		pthread_create(&receivedThread , NULL , receiveMsg , &newClient);
-		sleep(1);
 	}
 
 	close(oldsockfd);

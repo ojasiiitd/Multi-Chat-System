@@ -30,7 +30,7 @@ int main(int argc , char* argv[])
 
 	pthread_t receivedThread;
 
-	strcpy(username,argv[1]);
+	strcpy(username , argv[1]);
 	port = atoi(argv[2]);
 	oldsocketfd = socket(AF_INET , SOCK_STREAM , 0);
 	bzero(clientAddress.sin_zero , sizeof(clientAddress.sin_zero));
@@ -44,6 +44,8 @@ int main(int argc , char* argv[])
 		exit(1);
 	}
 
+	send(oldsocketfd , username , 50 , 0);
+
 	printf("You are now connected, %s, say Hello!\n" , username);
 	pthread_create(&receivedThread , NULL , receiveMsg , &oldsocketfd);
 
@@ -51,6 +53,11 @@ int main(int argc , char* argv[])
 
 	while(fgets(buffer , 1000 , stdin) > 0)
 	{
+		if(strcmp(buffer , "\n") == 0 || strcmp(buffer , " \n") == 0 || strcmp(buffer , "\t\n") == 0)
+		{
+			printf("%s\n" , "Input Error : message cannot be empty, please try again.");
+			continue;
+		}
 		strcpy(curMsg , username);
 		strcat(curMsg , ":\t");
 		strcat(curMsg , buffer);
